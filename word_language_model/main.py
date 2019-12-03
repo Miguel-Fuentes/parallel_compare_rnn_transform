@@ -52,7 +52,7 @@ parser.add_argument('--nhead', type=int, default=2,
 
 args = parser.parse_args()
 
-f = open(args.output_name, 'a')
+f = open(args.output_name, 'wb')
 
 def get_n_params(model):
     pp=0
@@ -113,8 +113,8 @@ if args.model == 'Transformer':
 else:
     model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.tied).to(device)
 
-f.write(f'This model has {get_n_params(model)} paramaters\n')
-f.write(f'{args}\n')
+f.write(f'This model has {get_n_params(model)} paramaters\n'.encode())
+f.write(f'{args}\n'.encode())
 
 criterion = nn.CrossEntropyLoss()
 
@@ -199,10 +199,10 @@ def train():
         if batch % args.log_interval == 0 and batch > 0:
             cur_loss = total_loss / args.log_interval
             elapsed = time.time() - start_time
-            f.write('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
-                    'loss {:5.2f} | ppl {:8.2f}'.format(
-                epoch, batch, len(train_data) // args.bptt, lr,
-                elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss)))
+            f.write('| epoch {epoch} | {batch}/{len(train_data) // args.bptt} batches | lr {lr} | ms/batch {elapsed * 1000 / args.log_interval} | '
+                    'loss {cur_loss} | ppl {math.exp(cur_loss)}'.encode())
+            #    epoch, batch, len(train_data) // args.bptt, lr,
+            #    elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss)))
             print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
                     'loss {:5.2f} | ppl {:8.2f}'.format(
                 epoch, batch, len(train_data) // args.bptt, lr,
@@ -230,11 +230,8 @@ try:
         epoch_start_time = time.time()
         train()
         val_loss = evaluate(val_data)
-        f.write('-' * 89)
-        f.write('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
-                'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
-                                           val_loss, math.exp(val_loss)))
-        f.write('-' * 89)
+        f.write(f'| end of epoch {epoch} | time: {time.time() - epoch_start_time}s | valid loss {val_loss} | '
+                'valid ppl {math.exp(val_loss)}'.encode())
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
                 'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
@@ -263,13 +260,10 @@ with open(args.save, 'rb') as f:
 
 # Run on test data.
 test_loss = evaluate(test_data)
-f.write('=' * 89)
 print('=' * 89)
-f.write('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
-    test_loss, math.exp(test_loss)))
+f.write(f'| End of training | test loss {test_loss} | test ppl {math.exp(test_loss)}'.encode())
 print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
     test_loss, math.exp(test_loss)))
-f.write('=' * 89)
 print('=' * 89)
 
 if len(args.onnx_export) > 0:
