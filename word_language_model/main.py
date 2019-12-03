@@ -51,8 +51,7 @@ parser.add_argument('--nhead', type=int, default=2,
                     help='the number of heads in the encoder/decoder of the transformer model')
 
 args = parser.parse_args()
-
-f = open(args.output_name, 'wb')
+epoch_times = []
 
 def get_n_params(model):
     pp=0
@@ -112,9 +111,6 @@ if args.model == 'Transformer':
     model = model.TransformerModel(ntokens, args.emsize, args.nhead, args.nhid, args.nlayers, args.dropout).to(device)
 else:
     model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.tied).to(device)
-
-f.write(f'This model has {get_n_params(model)} paramaters\n'.encode())
-f.write(f'{args}\n'.encode())
 
 criterion = nn.CrossEntropyLoss()
 
@@ -199,10 +195,6 @@ def train():
         if batch % args.log_interval == 0 and batch > 0:
             cur_loss = total_loss / args.log_interval
             elapsed = time.time() - start_time
-            f.write('| epoch {epoch} | {batch}/{len(train_data) // args.bptt} batches | lr {lr} | ms/batch {elapsed * 1000 / args.log_interval} | '
-                    'loss {cur_loss} | ppl {math.exp(cur_loss)}'.encode())
-            #    epoch, batch, len(train_data) // args.bptt, lr,
-            #    elapsed * 1000 / args.log_interval, cur_loss, math.exp(cur_loss)))
             print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.2f} | ms/batch {:5.2f} | '
                     'loss {:5.2f} | ppl {:8.2f}'.format(
                 epoch, batch, len(train_data) // args.bptt, lr,
@@ -230,13 +222,14 @@ try:
         epoch_start_time = time.time()
         train()
         val_loss = evaluate(val_data)
-        f.write(f'| end of epoch {epoch} | time: {time.time() - epoch_start_time}s | valid loss {val_loss} | '
-                'valid ppl {math.exp(val_loss)}'.encode())
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
                 'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
                                            val_loss, math.exp(val_loss)))
         print('-' * 89)
+
+        epoch_times.append((time.time() - epoch_start_time))
+
         # Save the model if the validation loss is the best we've seen so far.
         if not best_val_loss or val_loss < best_val_loss:
             with open(args.save, 'wb') as f:
@@ -261,7 +254,6 @@ with open(args.save, 'rb') as f:
 # Run on test data.
 test_loss = evaluate(test_data)
 print('=' * 89)
-f.write(f'| End of training | test loss {test_loss} | test ppl {math.exp(test_loss)}'.encode())
 print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
     test_loss, math.exp(test_loss)))
 print('=' * 89)
@@ -270,4 +262,5 @@ if len(args.onnx_export) > 0:
     # Export the model in ONNX format.
     export_onnx(args.onnx_export, batch_size=1, seq_len=args.bptt)
 
-f.close()
+with open(args.output_name, 'w') as f:
+    f.write(epoch_times)
