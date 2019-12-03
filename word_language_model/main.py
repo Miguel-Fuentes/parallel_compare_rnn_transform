@@ -263,4 +263,5 @@ if len(args.onnx_export) > 0:
     export_onnx(args.onnx_export, batch_size=1, seq_len=args.bptt)
 
 with open(args.output_name, 'w') as f:
-    f.write(epoch_times)
+    for time in epoch_times:
+        f.write(f'{time},\n')
